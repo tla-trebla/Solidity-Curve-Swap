@@ -1,32 +1,8 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-
-contract SwapContract {
-    AbstractToken public tokenA;
-    AbstractToken public tokenB;
-
-    constructor(address _tokenA, address _tokenB) {
-        tokenA = AbstractToken(_tokenA);
-        tokenB = AbstractToken(_tokenB);
-    }
-
-    function swap(address sender, address recipient, uint256 amount) public {
-        require(tokenA.balanceOf(sender) >= amount, "Insufficient TokenA balance");
-        require(tokenA.allowance(sender, address(this)) >= amount, "TokenA not approved");
-        require(tokenA.transferFrom(sender, address(this), amount), "TokenA transfer failed");
-
-        tokenB.mint(recipient, amount);
-    }
-}
-
-abstract contract AbstractToken {
-    function mint(address to, uint256 amount) public virtual;
-    function approve(address spender, uint256 amount) public virtual;
-    function allowance(address owner, address spender) public view virtual returns (uint256);
-    function balanceOf(address account) public view virtual returns (uint256);
-    function transferFrom(address from, address to, uint256 amount) public virtual returns (bool);
-}
+import {AbstractToken} from "../src/AbstractToken.sol";
+import {SwapContract} from "../src/SwapContract.sol";
 
 contract MockToken is AbstractToken {
     string public name;
