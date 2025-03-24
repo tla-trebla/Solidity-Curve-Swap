@@ -13,6 +13,7 @@ contract SwapContract {
 
     function swap(address sender, address recipient, uint256 amount) public {
         require(tokenA.balanceOf(sender) >= amount, "Insufficient TokenA balance");
+        require(MockToken(address(tokenA)).allowance(sender, address(this)) >= amount, "TokenA not approved");
 
         require(MockToken(address(tokenA)).transferFrom(sender, address(this), amount), "TokenA transfer failed"); // TODO: Use the production's implemented token later
         
@@ -23,6 +24,7 @@ contract SwapContract {
 abstract contract AbstractToken {
     function mint(address to, uint256 amount) public virtual;
     function approve(address spender, uint256 amount) public virtual;
+    function allowance(address owner, address spender) public view virtual returns (uint256);
     function balanceOf(address account) public view virtual returns (uint256);
 }
 
@@ -43,6 +45,10 @@ contract MockToken is AbstractToken {
 
     function approve(address spender, uint256 amount) public override {
         allowances[msg.sender][spender] = amount;
+    }
+
+    function allowance(address owner, address spender) public view override returns (uint256) {
+        return allowances[owner][spender];
     }
 
     function balanceOf(address account) public view override returns (uint256) {
@@ -106,6 +112,23 @@ contract SwapContractTest is Test {
 
         vm.prank(addressA);
         vm.expectRevert("Insufficient TokenA balance");
+        swapContract.swap(addressA, addressB, swapAmount);
+    }
+
+    function test_NoApproval_FailToSwap() public {
+        MockToken tokenA = new MockToken("Token A", "TKA");
+        MockToken tokenB = new MockToken("Token B", "TKB");
+        SwapContract swapContract = new SwapContract(address(tokenA), address(tokenB));
+
+        address addressA = vm.addr(1);
+        address addressB = vm.addr(2);
+        uint256 swapAmount = 100 * 1e18;
+
+        vm.prank(addressA);
+        tokenA.mint(addressA, swapAmount);
+
+        vm.prank(addressA);
+        vm.expectRevert("TokenA not approved");
         swapContract.swap(addressA, addressB, swapAmount);
     }
 }
