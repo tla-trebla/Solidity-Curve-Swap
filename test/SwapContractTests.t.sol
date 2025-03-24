@@ -94,4 +94,18 @@ contract SwapContractTest is Test {
         assertEq(tokenA.balanceOf(addressA), 0, "TokenA should be deducted from addressA");
         assertEq(tokenB.balanceOf(addressB), swapAmount, "TokenB should be received by addressB");
     }
+
+    function test_SwapInsufficientBalance_FailToSwap() public {
+        MockToken tokenA = new MockToken("Token A", "TKA");
+        MockToken tokenB = new MockToken("Token B", "TKB");
+        SwapContract swapContract = new SwapContract(address(tokenA), address(tokenB));
+
+        address addressA = vm.addr(1);
+        address addressB = vm.addr(2);
+        uint256 swapAmount = 100 * 1e18;
+
+        vm.prank(addressA);
+        vm.expectRevert("Insufficient TokenA balance");
+        swapContract.swap(addressA, addressB, swapAmount);
+    }
 }
