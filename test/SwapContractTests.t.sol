@@ -13,10 +13,9 @@ contract SwapContract {
 
     function swap(address sender, address recipient, uint256 amount) public {
         require(tokenA.balanceOf(sender) >= amount, "Insufficient TokenA balance");
-        require(MockToken(address(tokenA)).allowance(sender, address(this)) >= amount, "TokenA not approved");
+        require(tokenA.allowance(sender, address(this)) >= amount, "TokenA not approved");
+        require(tokenA.transferFrom(sender, address(this), amount), "TokenA transfer failed");
 
-        require(MockToken(address(tokenA)).transferFrom(sender, address(this), amount), "TokenA transfer failed"); // TODO: Use the production's implemented token later
-        
         tokenB.mint(recipient, amount);
     }
 }
@@ -26,6 +25,7 @@ abstract contract AbstractToken {
     function approve(address spender, uint256 amount) public virtual;
     function allowance(address owner, address spender) public view virtual returns (uint256);
     function balanceOf(address account) public view virtual returns (uint256);
+    function transferFrom(address from, address to, uint256 amount) public virtual returns (bool);
 }
 
 contract MockToken is AbstractToken {
@@ -33,6 +33,7 @@ contract MockToken is AbstractToken {
     string public symbol;
     mapping(address => uint256) private balances;
     mapping(address => mapping(address => uint256)) private allowances;
+    bool private transferShouldFail = false;
 
     constructor(string memory _name, string memory _symbol) {
         name = _name;
@@ -55,9 +56,14 @@ contract MockToken is AbstractToken {
         return balances[account];
     }
 
-    function transferFrom(address from, address to, uint256 amount) public returns (bool) {
+    function setTransferShouldFail(bool shouldFail) public {
+        transferShouldFail = shouldFail;
+    }
+
+    function transferFrom(address from, address to, uint256 amount) public override returns (bool) {
         require(balances[from] >= amount, "Insufficient balance");
         require(allowances[from][msg.sender] >= amount, "Allowance exceeded");
+        require(!transferShouldFail, "MockToken: transferFrom failed");
 
         balances[from] -= amount;
         balances[to] += amount;
@@ -86,13 +92,17 @@ contract SwapContractTest is Test {
         address addressA = vm.addr(1);
         address addressB = vm.addr(2);
         uint256 swapAmount = 100 * 1e18;
-
+        
+        vm.startPrank(addressA);
         tokenA.mint(addressA, swapAmount);
-
-        assertEq(tokenA.balanceOf(addressA), swapAmount, "Minting failed for addressA");
+        tokenA.approve(address(sut), swapAmount);
+        vm.stopPrank();
+        assertEq(tokenA.balanceOf(addressA), swapAmount, "Minting did not work");
 
         vm.prank(addressA);
         tokenA.approve(address(sut), swapAmount);
+        assertEq(tokenA.allowance(addressA, address(sut)), swapAmount, "Approval did not work");
+        assertEq(tokenA.balanceOf(addressA), swapAmount, "Balance not updated before swap");
 
         vm.prank(addressA);
         sut.swap(addressA, addressB, swapAmount);
@@ -130,5 +140,24 @@ contract SwapContractTest is Test {
         vm.prank(addressA);
         vm.expectRevert("TokenA not approved");
         swapContract.swap(addressA, addressB, swapAmount);
+    }
+
+    function test_TransferFail_FailToSwap() public {
+        MockToken tokenA = new MockToken("Token A", "TKA");
+        MockToken tokenB = new MockToken("Token B", "TKB");
+        address sender = vm.addr(1);
+        address recipient = vm.addr(2);
+        uint256 swapAmount = 100;
+        SwapContract swapContract = new SwapContract(address(tokenA), address(tokenB));
+
+        tokenA.mint(sender, swapAmount);
+        
+        vm.prank(sender);
+        tokenA.approve(address(swapContract), swapAmount);
+        
+        tokenA.setTransferShouldFail(true);
+
+        vm.expectRevert("MockToken: transferFrom failed");
+        swapContract.swap(sender, recipient, swapAmount);
     }
 }
