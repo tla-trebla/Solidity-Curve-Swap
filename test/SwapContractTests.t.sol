@@ -92,4 +92,11 @@ contract SwapContractTest is Test {
         vm.expectRevert("MockToken: transferFrom failed");
         swapContract.swap(sender, recipient, swapAmount);
     }
+
+    function test_SwapSameToken_FailToSwap() public {
+        MockToken tokenA = new MockToken("TokenA", "TKA");
+        vm.expectRevert("TokenA and TokenB must be different");
+
+        SwapContract sut = new SwapContract(address(tokenA), address(tokenA));
+    }
 }

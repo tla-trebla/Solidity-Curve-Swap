@@ -7,6 +7,7 @@ contract SwapContract {
     AbstractToken public tokenB;
 
     constructor(address _tokenA, address _tokenB) {
+        require(_tokenA != _tokenB, "TokenA and TokenB must be different");
         tokenA = AbstractToken(_tokenA);
         tokenB = AbstractToken(_tokenB);
     }
