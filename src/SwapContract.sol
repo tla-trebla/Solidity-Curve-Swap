@@ -10,6 +10,7 @@ contract SwapContract {
         require(_tokenA != _tokenB, "TokenA and TokenB must be different");
         tokenA = AbstractToken(_tokenA);
         tokenB = AbstractToken(_tokenB);
+        require(tokenA.decimals() == tokenB.decimals(), "Tokens must have the same decimals");
     }
 
     function swap(address sender, address recipient, uint256 amount) public {

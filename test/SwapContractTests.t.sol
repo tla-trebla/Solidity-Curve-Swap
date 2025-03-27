@@ -7,8 +7,8 @@ import {MockToken} from "./MockToken.sol";
 
 contract SwapContractTest is Test {
     function test_Initialization_ShouldStartWithZeroBalances() public {
-        MockToken tokenA = new MockToken("Token A", "TKA");
-        MockToken tokenB = new MockToken("Token B", "TKB");
+        MockToken tokenA = new MockToken("Token A", "TKA", 8);
+        MockToken tokenB = new MockToken("Token B", "TKB", 8);
 
         SwapContract swapContract = new SwapContract(address(tokenA), address(tokenB));
 
@@ -17,8 +17,8 @@ contract SwapContractTest is Test {
     }
 
     function test_SwapSufficientBalance_BalancesShouldDeductedAndReceived() public {
-        MockToken tokenA = new MockToken("Token A", "TKA");
-        MockToken tokenB = new MockToken("Token B", "TKB");
+        MockToken tokenA = new MockToken("Token A", "TKA", 8);
+        MockToken tokenB = new MockToken("Token B", "TKB", 8);
         SwapContract sut = new SwapContract(address(tokenA), address(tokenB));
 
         address addressA = vm.addr(1);
@@ -44,8 +44,8 @@ contract SwapContractTest is Test {
     }
 
     function test_SwapInsufficientBalance_FailToSwap() public {
-        MockToken tokenA = new MockToken("Token A", "TKA");
-        MockToken tokenB = new MockToken("Token B", "TKB");
+        MockToken tokenA = new MockToken("Token A", "TKA", 8);
+        MockToken tokenB = new MockToken("Token B", "TKB", 8);
         SwapContract swapContract = new SwapContract(address(tokenA), address(tokenB));
 
         address addressA = vm.addr(1);
@@ -58,8 +58,8 @@ contract SwapContractTest is Test {
     }
 
     function test_NoApproval_FailToSwap() public {
-        MockToken tokenA = new MockToken("Token A", "TKA");
-        MockToken tokenB = new MockToken("Token B", "TKB");
+        MockToken tokenA = new MockToken("Token A", "TKA", 8);
+        MockToken tokenB = new MockToken("Token B", "TKB", 8);
         SwapContract swapContract = new SwapContract(address(tokenA), address(tokenB));
 
         address addressA = vm.addr(1);
@@ -75,8 +75,8 @@ contract SwapContractTest is Test {
     }
 
     function test_TransferFail_FailToSwap() public {
-        MockToken tokenA = new MockToken("Token A", "TKA");
-        MockToken tokenB = new MockToken("Token B", "TKB");
+        MockToken tokenA = new MockToken("Token A", "TKA", 8);
+        MockToken tokenB = new MockToken("Token B", "TKB", 8);
         address sender = vm.addr(1);
         address recipient = vm.addr(2);
         uint256 swapAmount = 100;
@@ -94,9 +94,17 @@ contract SwapContractTest is Test {
     }
 
     function test_SwapSameToken_FailToSwap() public {
-        MockToken tokenA = new MockToken("TokenA", "TKA");
+        MockToken tokenA = new MockToken("TokenA", "TKA", 8);
         vm.expectRevert("TokenA and TokenB must be different");
+        
+        new SwapContract(address(tokenA), address(tokenA));
+    }
 
-        SwapContract sut = new SwapContract(address(tokenA), address(tokenA));
+    function test_SwapTokensWithDifferentDecimals_FailToSwap() public {
+        MockToken tokenA = new MockToken("TokenA", "TKA", 8);
+        MockToken tokenB = new MockToken("TokenB", "TKB", 16);
+        vm.expectRevert("Tokens must have the same decimals");
+
+        new SwapContract(address(tokenA), address(tokenB));
     }
 }

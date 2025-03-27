@@ -3,16 +3,10 @@ pragma solidity ^0.8.13;
 import {AbstractToken} from "../src/AbstractToken.sol";
 
 contract MockToken is AbstractToken {
-    string public name;
-    string public symbol;
-    mapping(address => uint256) private balances;
     mapping(address => mapping(address => uint256)) private allowances;
     bool private transferShouldFail = false;
 
-    constructor(string memory _name, string memory _symbol) {
-        name = _name;
-        symbol = _symbol;
-    }
+    constructor(string memory _name, string memory _symbol, uint8 decimals_) AbstractToken(_name, _symbol, decimals_) {}
 
     function mint(address to, uint256 amount) public override {
         balances[to] += amount;
