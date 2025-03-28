@@ -2,6 +2,7 @@ pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
 import {AbstractToken} from "../src/AbstractToken.sol";
+import {MockToken} from "./MockToken.sol";
 
 contract TokenConverter {
     function convert(uint256 amount, AbstractToken tokenA, AbstractToken tokenB) external view returns(uint256) {
@@ -23,5 +24,16 @@ contract TokenConverter {
 contract TokenConverterTest is Test {
     function test_Initialization_doesNothing() public {
         assertTrue(address(new TokenConverter()) != address(0));
+    }
+
+    function test_SameDecimals_ShouldReturnSameAmount() public {
+        MockToken tokenA = new MockToken("TokenA", "TKA", 18);
+        MockToken tokenB = new MockToken("TokenB", "TKB", 18);
+        TokenConverter sut = new TokenConverter();
+        uint256 amount = 100 * 1e18;
+
+        uint256 result = sut.convert(amount, tokenA, tokenB);
+
+        assertEq(result, amount, "Conversion should return the same amount");
     }
 }
