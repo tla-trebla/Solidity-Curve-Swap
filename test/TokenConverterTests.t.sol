@@ -36,4 +36,15 @@ contract TokenConverterTest is Test {
 
         assertEq(result, amount, "Conversion should return the same amount");
     }
+
+    function test_targetLowerDecimals_ShouldDivide() public {
+        MockToken tokenA = new MockToken("TokenA", "TKA", 18);
+        MockToken tokenB = new MockToken("TokenB", "TKB", 6);
+        TokenConverter sut = new TokenConverter();
+        uint256 amount = 100 * 1e18;
+
+        uint256 result = sut.convert(amount, tokenA, tokenB);
+
+        assertEq(result, 100 * 1e6, "Conversion should scale down");
+    }
 }
