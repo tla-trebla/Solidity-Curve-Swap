@@ -58,4 +58,14 @@ contract TokenConverterTest is Test {
 
         assertEq(result, 100 * 1e18, "Conversion should scale up");
     }
+
+    function test_InvalidDecimals_ShouldRevert() public {
+        MockToken tokenA = new MockToken("TokenA", "TKA", 0);
+        MockToken tokenB = new MockToken("TokenB", "TKB", 18);
+        TokenConverter sut = new TokenConverter();
+        uint256 amount = 100 * 1e18;
+
+        vm.expectRevert("Invalid token decimals");
+        sut.convert(amount, tokenA, tokenB);
+    }
 }
