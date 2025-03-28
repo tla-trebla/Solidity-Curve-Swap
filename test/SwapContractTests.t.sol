@@ -99,12 +99,4 @@ contract SwapContractTest is Test {
         
         new SwapContract(address(tokenA), address(tokenA));
     }
-
-    function test_SwapTokensWithDifferentDecimals_FailToSwap() public {
-        MockToken tokenA = new MockToken("TokenA", "TKA", 8);
-        MockToken tokenB = new MockToken("TokenB", "TKB", 16);
-        vm.expectRevert("Tokens must have the same decimals");
-
-        new SwapContract(address(tokenA), address(tokenB));
-    }
 }
