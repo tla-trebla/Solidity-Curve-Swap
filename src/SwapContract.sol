@@ -22,6 +22,18 @@ contract SwapContract {
         uint256 convertedAmount = converter.convert(amount, tokenA, tokenB);
         
         require(tokenA.transferFrom(sender, address(this), amount), "TokenA transfer failed");
-        tokenB.mint(recipient, convertedAmount);
+
+        uint256 tokenBBalance = tokenB.balanceOf(address(this));
+
+        if (tokenBBalance >= convertedAmount) {
+            require(tokenB.transfer(recipient, convertedAmount), "TokenB transfer failed");
+        } else {
+            uint256 mintAmount = convertedAmount - tokenBBalance;
+            tokenB.mint(recipient, mintAmount);
+
+            if (tokenBBalance > 0) {
+                require(tokenB.transfer(recipient, tokenBBalance), "Token transfer failed");
+            }
+        }
     }
 }

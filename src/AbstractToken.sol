@@ -20,4 +20,5 @@ abstract contract AbstractToken {
     function decimals() public view returns(uint8) {
         return _decimals;
     }
+    function transfer(address to, uint256 amount) public virtual returns (bool);
 }

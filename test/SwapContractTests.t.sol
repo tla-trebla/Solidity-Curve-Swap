@@ -16,7 +16,7 @@ contract SwapContractTest is Test {
         assertEq(tokenB.balanceOf(address(swapContract)), 0, "TokenB balance should start at zero");
     }
 
-    function test_SwapSufficientBalance_BalancesShouldDeductedAndReceived() public {
+    function test_SufficientBalance_BalancesShouldDeductedAndMinted() public {
         MockToken tokenA = new MockToken("Token A", "TKA", 8);
         MockToken tokenB = new MockToken("Token B", "TKB", 8);
         SwapContract sut = new SwapContract(address(tokenA), address(tokenB));
@@ -41,6 +41,34 @@ contract SwapContractTest is Test {
 
         assertEq(tokenA.balanceOf(addressA), 0, "TokenA should be deducted from addressA");
         assertEq(tokenB.balanceOf(addressB), swapAmount, "TokenB should be received by addressB");
+    }
+
+    function test_SufficientBalance_TransferCorrectly() public {
+        MockToken tokenA = new MockToken("Token A", "TKA", 18);
+        MockToken tokenB = new MockToken("Token B", "TKB", 18);
+        SwapContract sut = new SwapContract(address(tokenA), address(tokenB));
+
+        address addressA = vm.addr(1);
+        address addressB = vm.addr(2);
+        uint256 swapAmount = 100 * 1e18;
+
+        vm.prank(addressA);
+        tokenA.mint(addressA, swapAmount);
+        assertEq(tokenA.balanceOf(addressA), swapAmount, "Minting did not work");
+
+        tokenB.mint(address(sut), swapAmount);
+        assertEq(tokenB.balanceOf(address(sut)), swapAmount, "Contract should have pre-minted tokenB");
+
+        vm.prank(addressA);
+        tokenA.approve(address(sut), swapAmount);
+        assertEq(tokenA.allowance(addressA, address(sut)), swapAmount, "Approval did not work");
+
+        vm.prank(addressA);
+        sut.swap(addressA, addressB, swapAmount);
+
+        assertEq(tokenA.balanceOf(addressA), 0, "TokenA should be deducted from addressA");
+        assertEq(tokenB.balanceOf(addressB), swapAmount, "TokenB should be received by addressB");
+        assertEq(tokenB.balanceOf(address(sut)), 0, "Contract should have given tokenB to addressB");
     }
 
     function test_SwapInsufficientBalance_FailToSwap() public {

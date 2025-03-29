@@ -39,4 +39,14 @@ contract MockToken is AbstractToken {
 
         return true;
     }
+
+    function transfer(address to, uint256 amount) public override returns (bool) {
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        require(!transferShouldFail, "MockToken: transfer failed");
+
+        balances[msg.sender] -= amount;
+        balances[to] += amount;
+
+        return true;
+    }
 }
