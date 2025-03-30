@@ -3,8 +3,8 @@ pragma solidity ^0.8.13;
 import {Test, console} from "forge-std/Test.sol";
 
 contract InvariantCalculator {
-    uint256 public immutable tokenCount;
-    uint256 public immutable amplificationFactor;
+    uint256 private tokenCount;
+    uint256 private amplificationFactor;
 
     constructor(uint256 numberOfTokens) {
         require(numberOfTokens > 1, "Pool must have at least 2 tokens");
@@ -46,17 +46,39 @@ contract InvariantCalculator {
     function _absoluteDifference(uint256 value1, uint256 value2) private pure returns (uint256) {
         return value1 >= value2 ? value1 - value2 : value2 - value1;
     }
+
+    function getTokenCount() external view returns (uint256) {
+        return tokenCount;
+    }
+
+    function getAmplificationFactor() external view returns (uint256) {
+        return amplificationFactor;
+    }
 }
 
 contract InvariantCalculatorTest is Test {
     function test_Initialization_ShouldDoNothing() public {
         uint256 expectedTokenCount = 3;
         
-        InvariantCalculator invariantCalculator = new InvariantCalculator(expectedTokenCount);
-        assertTrue(address(invariantCalculator) != address(0), "Deployment failed");
+        InvariantCalculator sut = new InvariantCalculator(expectedTokenCount);
+        assertTrue(address(sut) != address(0), "Deployment failed");
 
-        assertEq(invariantCalculator.tokenCount(), expectedTokenCount, "Token count mismatch");
+        assertEq(sut.getTokenCount(), expectedTokenCount, "Token count mismatch");
         uint256 expectedAmplificationFactor = 1000 * (expectedTokenCount ** (expectedTokenCount - 1));
-        assertEq(invariantCalculator.amplificationFactor(), expectedAmplificationFactor, "Amplification factor mismatch");
+        assertEq(sut.getAmplificationFactor(), expectedAmplificationFactor, "Amplification factor mismatch");
+    }
+
+    function test_GetInvariant_ShouldReturnCorrectInvariant() public {
+       uint256[] memory balances = new uint256[](3);
+        balances[0] = 1000 * 1e18;
+        balances[1] = 2000 * 1e18;
+        balances[2] = 3000 * 1e18;
+        
+        InvariantCalculator sut = new InvariantCalculator(balances.length);
+
+        uint256 invariant = sut.getInvariant(balances);
+
+        uint256 expectedInvariant = 5999925937812179024969;
+        assertEq(invariant, expectedInvariant, "Invariant calculation is incorrect");
     }
 }
