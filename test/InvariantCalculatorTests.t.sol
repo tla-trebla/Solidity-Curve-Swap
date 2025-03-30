@@ -22,6 +22,10 @@ contract InvariantCalculator {
             sumOfBalances += tokenBalances[i];
         }
 
+        if (sumOfBalances == 0) {
+            return 0;
+        }
+
         uint256 invariantValue = sumOfBalances;
         uint256 previousInvariantValue;
 
@@ -93,5 +97,18 @@ contract InvariantCalculatorTest is Test {
 
         vm.expectRevert("Invariant calculation did not converge");
         calculator.getInvariant(imbalancedReserves);
+    }
+
+    function test_ZeroBalances_ShouldReturnZeroWhenAllBalancesAreZero() public {
+        uint256 expectedTokenCount = 3;
+        InvariantCalculator calculator = new InvariantCalculator(expectedTokenCount);
+
+        uint256[] memory zeroBalances = new uint256[](expectedTokenCount);
+        for (uint256 i = 0; i < expectedTokenCount; i++) {
+            zeroBalances[i] = 0;
+        }
+
+        uint256 invariant = calculator.getInvariant(zeroBalances);
+        assertEq(invariant, 0, "Invariant should be zero when all balances are zero");
     }
 }
