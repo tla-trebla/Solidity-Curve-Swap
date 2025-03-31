@@ -125,4 +125,23 @@ contract SwapBalanceCalculatorTests is Test {
         vm.expectRevert("Invalid token index");
         sut.getNewBalance(1, invalidIndex, 50, tokenBalances);
     }
+
+    function test_OneTokenHasHigherBalance_ShouldComputedProperly() public {
+        uint256 expectedTokenCount = 3;
+        InvariantCalculator invariantCalculator = new InvariantCalculator(expectedTokenCount);
+        SwapBalanceCalculator sut = new SwapBalanceCalculator(invariantCalculator);
+
+        uint256[] memory tokenBalances = new uint256[](expectedTokenCount);
+        tokenBalances[0] = 100;
+        tokenBalances[1] = 10**18;
+        tokenBalances[2] = 100;
+
+        uint256 inputTokenIndex = 0;
+        uint256 outputTokenIndex = 1;
+        uint256 inputAmount = 50;
+
+        uint256 newBalance = sut.getNewBalance(inputTokenIndex, outputTokenIndex, inputAmount, tokenBalances);
+
+        assertTrue(newBalance > 0, "New balance should be computed properly");
+    }
 }
