@@ -1,8 +1,9 @@
 pragma solidity ^0.8.13;
 
 import "./InvariantCalculator.sol";
+import "./SwapBalanceCalculatorInterface.sol";
 
-contract SwapBalanceCalculator {
+contract SwapBalanceCalculator is SwapBalanceCalculatorInterface {
     InvariantCalculator private invariantCalculator;
 
     constructor(InvariantCalculator _invariantCalculator) {
@@ -14,7 +15,7 @@ contract SwapBalanceCalculator {
         uint256 tokenOutIndex,
         uint256 newBalanceTokenIn,
         uint256[] memory tokenBalances
-    ) public view returns (uint256 newBalanceTokenOut) {
+    ) public view override returns (uint256 newBalanceTokenOut) {
         require(tokenInIndex != tokenOutIndex, "Cannot swap the same token");
         require(tokenInIndex < tokenBalances.length && tokenOutIndex < tokenBalances.length, "Invalid token index");
 

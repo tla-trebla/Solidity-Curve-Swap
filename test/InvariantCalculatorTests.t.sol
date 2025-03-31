@@ -16,7 +16,7 @@ contract InvariantCalculatorTest is Test {
     }
 
     function test_GetInvariant_ShouldReturnCorrectInvariant() public {
-       uint256[] memory balances = new uint256[](3);
+        uint256[] memory balances = new uint256[](3);
         balances[0] = 1000 * 1e18;
         balances[1] = 2000 * 1e18;
         balances[2] = 3000 * 1e18;
