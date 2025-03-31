@@ -4,65 +4,62 @@ import {Test, console} from "forge-std/Test.sol";
 import {InvariantCalculator} from "../src/InvariantCalculator.sol";
 
 contract SwapBalanceCalculator {
-    InvariantCalculator private immutable invariantCalculator;
-    uint256 private immutable tokenCount;
-    uint256 private immutable amplificationFactor;
+    InvariantCalculator private invariantCalculator;
 
     constructor(InvariantCalculator _invariantCalculator) {
         invariantCalculator = _invariantCalculator;
-        tokenCount = _invariantCalculator.getTokenCount();
-        amplificationFactor = _invariantCalculator.getAmplificationFactor();
     }
     
-    function getExpectedBalanceAfterSwap(
-        uint256 tokenIn,
-        uint256 tokenOut,
-        uint256 newBalanceIn,
+    function getNewBalance(
+        uint256 tokenInIndex,
+        uint256 tokenOutIndex,
+        uint256 newBalanceTokenIn,
         uint256[] memory tokenBalances
-    ) public view returns (uint256) {
-        require(tokenIn != tokenOut, "Cannot swap the same token");
-        require(tokenIn < tokenCount && tokenOut < tokenCount, "Invalid token index");
-        require(tokenBalances.length == tokenCount, "Incorrect number of balances");
+    ) public view returns (uint256 newBalanceTokenOut) {
+        require(tokenInIndex != tokenOutIndex, "Cannot swap the same token");
+        require(tokenInIndex < tokenBalances.length && tokenOutIndex < tokenBalances.length, "Invalid token index");
 
-        uint256 aN = amplificationFactor * tokenCount;
-        uint256 d = invariantCalculator.getInvariant(tokenBalances);
-        uint256 sumBalances;
-        uint256 c = d;
-        uint256 balanceK;
+        uint256 totalTokens = tokenBalances.length;
+        uint256 amplificationFactor = invariantCalculator.getAmplificationFactor();
+        uint256 invariantValue = invariantCalculator.getInvariant(tokenBalances);
 
-        for (uint256 k = 0; k < tokenCount; ++k) {
-            if (k == tokenIn) {
-                balanceK = newBalanceIn;
-            } else if (k == tokenOut) {
+        uint256 sumExcludingOut;
+        uint256 productExcludingOut = invariantValue;
+
+        uint256 currentBalance;
+        for (uint256 k = 0; k < totalTokens; ++k) {
+            if (k == tokenInIndex) {
+                currentBalance = newBalanceTokenIn;
+            } else if (k == tokenOutIndex) {
                 continue;
             } else {
-                balanceK = tokenBalances[k];
+                currentBalance = tokenBalances[k];
             }
 
-            sumBalances += balanceK;
-            c = (c * d) / (tokenCount * balanceK);
+            sumExcludingOut += currentBalance;
+            productExcludingOut = (productExcludingOut * invariantValue) / (totalTokens * currentBalance);
         }
 
-        c = (c * d) / (tokenCount * aN);
-        uint256 b = sumBalances + d / aN;
+        productExcludingOut = (productExcludingOut * invariantValue) / (totalTokens * amplificationFactor);
+        uint256 balanceOutBase = sumExcludingOut + (invariantValue / amplificationFactor);
 
         uint256 yPrev;
-        uint256 y = d;
+        newBalanceTokenOut = invariantValue;
 
         for (uint256 i = 0; i < 255; ++i) {
-            yPrev = y;
-            y = (y * y + c) / (2 * y + b - d);
+            yPrev = newBalanceTokenOut;
+            newBalanceTokenOut = (newBalanceTokenOut * newBalanceTokenOut + productExcludingOut) / (2 * newBalanceTokenOut + balanceOutBase - invariantValue);
 
-            if (_absoluteDifference(y, yPrev) <= 1) {
-                return y;
+            if (_absoluteDifference(newBalanceTokenOut, yPrev) <= 1) {
+                return newBalanceTokenOut;
             }
         }
 
-        revert("Swap calculation did not converge");
+        revert("Swap balance calculation did not converge");
     }
 
     function _absoluteDifference(uint256 value1, uint256 value2) private pure returns (uint256) {
-        return value1 > value2 ? value1 - value2 : value2 - value1;
+        return value1 >= value2 ? value1 - value2 : value2 - value1;
     }
 }
 
@@ -74,5 +71,24 @@ contract SwapBalanceCalculatorTests is Test {
         SwapBalanceCalculator sut = new SwapBalanceCalculator(invariantCalculator);
 
         assertTrue(address(sut) != address(0), "Contract should be deployed successfully");
+    }
+
+    function test_ProperTokens_ReturnsProperResult() public {
+        uint256 expectedTokenCount = 3;
+        InvariantCalculator invariantCalculator = new InvariantCalculator(expectedTokenCount);
+        SwapBalanceCalculator sut = new SwapBalanceCalculator(invariantCalculator);
+
+        uint256[] memory initialBalances = new uint256[](expectedTokenCount);
+        initialBalances[0] = 1000;
+        initialBalances[1] = 2000;
+        initialBalances[2] = 3000;
+
+        uint256 tokenInIndex = 0;
+        uint256 tokenOutIndex = 1;
+        uint256 newBalanceTokenA = 1200;
+
+        uint256 expectedBalanceTokenB = sut.getNewBalance(tokenInIndex, tokenOutIndex, newBalanceTokenA, initialBalances);
+
+        assertGt(expectedBalanceTokenB, 0, "Token B balance should be updated after swap");
     }
 }
