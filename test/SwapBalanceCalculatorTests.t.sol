@@ -19,6 +19,10 @@ contract SwapBalanceCalculator {
         require(tokenInIndex != tokenOutIndex, "Cannot swap the same token");
         require(tokenInIndex < tokenBalances.length && tokenOutIndex < tokenBalances.length, "Invalid token index");
 
+        if (newBalanceTokenIn == 0) {
+            return tokenBalances[tokenOutIndex];
+        }
+
         uint256 totalTokens = tokenBalances.length;
         uint256 amplificationFactor = invariantCalculator.getAmplificationFactor();
         uint256 invariantValue = invariantCalculator.getInvariant(tokenBalances);
@@ -143,5 +147,24 @@ contract SwapBalanceCalculatorTests is Test {
         uint256 newBalance = sut.getNewBalance(inputTokenIndex, outputTokenIndex, inputAmount, tokenBalances);
 
         assertTrue(newBalance > 0, "New balance should be computed properly");
+    }
+
+    function test_SwappingZeroAmount_ReturnsSameBalance() public {
+        uint256 expectedTokenCount = 3;
+        InvariantCalculator invariantCalculator = new InvariantCalculator(expectedTokenCount);
+        SwapBalanceCalculator sut = new SwapBalanceCalculator(invariantCalculator);
+
+        uint256[] memory tokenBalances = new uint256[](expectedTokenCount);
+        tokenBalances[0] = 500;
+        tokenBalances[1] = 1000;
+        tokenBalances[2] = 750;
+
+        uint256 inputTokenIndex = 0;
+        uint256 outputTokenIndex = 1;
+        uint256 inputAmount = 0;
+
+        uint256 newBalance = sut.getNewBalance(inputTokenIndex, outputTokenIndex, inputAmount, tokenBalances);
+
+        assertEq(newBalance, tokenBalances[outputTokenIndex], "Balance should remain unchanged when swapping zero tokens.");
     }
 }
