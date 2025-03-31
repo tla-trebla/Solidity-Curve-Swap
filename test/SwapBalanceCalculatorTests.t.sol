@@ -106,4 +106,23 @@ contract SwapBalanceCalculatorTests is Test {
         vm.expectRevert("Cannot swap the same token");
         sut.getNewBalance(tokenIndex, tokenIndex, initialBalances[tokenIndex], initialBalances);
     }
+
+    function test_OutOfBounds_ShouldRevert() public {
+        uint256 expectedTokenCount = 3;
+        InvariantCalculator invariantCalculator = new InvariantCalculator(expectedTokenCount);
+        SwapBalanceCalculator sut = new SwapBalanceCalculator(invariantCalculator);
+
+        uint256[] memory tokenBalances = new uint256[](expectedTokenCount);
+        tokenBalances[0] = 100;
+        tokenBalances[1] = 200;
+        tokenBalances[2] = 300;
+
+        uint256 invalidIndex = expectedTokenCount;
+
+        vm.expectRevert("Invalid token index");
+        sut.getNewBalance(invalidIndex, 1, 50, tokenBalances);
+
+        vm.expectRevert("Invalid token index");
+        sut.getNewBalance(1, invalidIndex, 50, tokenBalances);
+    }
 }
