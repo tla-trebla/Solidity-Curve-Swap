@@ -91,4 +91,19 @@ contract SwapBalanceCalculatorTests is Test {
 
         assertGt(expectedBalanceTokenB, 0, "Token B balance should be updated after swap");
     }
+
+    function test_SameInputAndOutputIndex_ShouldRevert() public {
+        uint256 expectedTokenCount = 3;
+        InvariantCalculator invariantCalculator = new InvariantCalculator(expectedTokenCount);
+        SwapBalanceCalculator sut = new SwapBalanceCalculator(invariantCalculator);
+
+        uint256[] memory initialBalances = new uint256[](expectedTokenCount);
+        initialBalances[0] = 1000;
+        initialBalances[1] = 2000;
+        initialBalances[2] = 3000;
+
+        uint256 tokenIndex = 1;
+        vm.expectRevert("Cannot swap the same token");
+        sut.getNewBalance(tokenIndex, tokenIndex, initialBalances[tokenIndex], initialBalances);
+    }
 }
