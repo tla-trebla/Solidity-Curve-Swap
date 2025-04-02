@@ -2,5 +2,15 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+solc = "0.8.13"
+optimizer = true
+optimizer_runs = 200
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+
+[rpc_endpoints]
+local = "http://localhost:8545"
+
+[profile.etherscan_api]
+mainnet = "${ETHERSCAN_API_KEY}"
+goerli = "${ETHERSCAN_API_KEY}"

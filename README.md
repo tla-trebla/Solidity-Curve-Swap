@@ -1,66 +1,73 @@
-## Foundry
+# StableSwap
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+A Solidity implementation of a stable swap AMM (Automated Market Maker) based on the Curve protocol. This implementation supports 3 tokens with equal decimals and uses a constant product formula with an amplification factor to maintain price stability.
 
-Foundry consists of:
+## Features
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+- Support for 3 tokens with equal decimals
+- Constant product formula with amplification factor
+- Swap functionality with fees
+- Add/remove liquidity functionality
+- Single token liquidity removal
+- Virtual price calculation
+- Comprehensive test coverage
 
-## Documentation
+## Architecture
 
-https://book.getfoundry.sh/
+The contract uses the following key components:
 
-## Usage
+1. **Math Library**: Provides mathematical functions for calculations
+2. **StableSwap Contract**: Main contract implementing the AMM logic
+3. **MockERC20**: Test token implementation for testing
 
-### Build
+### Key Functions
 
-```shell
-$ forge build
-```
+- `swap`: Exchange one token for another
+- `addLiquidity`: Add liquidity to the pool
+- `removeLiquidity`: Remove liquidity from the pool
+- `removeLiquidityOneToken`: Remove liquidity in a single token
+- `getVirtualPrice`: Calculate the virtual price of LP tokens
 
-### Test
+## Development
 
-```shell
-$ forge test
-```
+### Prerequisites
 
-### Format
+- Foundry
+- Solidity 0.8.13
+- OpenZeppelin Contracts
 
-```shell
-$ forge fmt
-```
+### Setup
 
-### Gas Snapshots
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   forge install
+   ```
+3. Build the project:
+   ```bash
+   forge build
+   ```
+4. Run tests:
+   ```bash
+   forge test
+   ```
 
-```shell
-$ forge snapshot
-```
+### Testing
 
-### Anvil
+The project includes comprehensive tests covering:
+- Initial state
+- Adding liquidity
+- Swapping tokens
+- Removing liquidity
+- Edge cases and error conditions
 
-```shell
-$ anvil
-```
+## Security Considerations
 
-### Deploy
+- The contract uses OpenZeppelin's SafeMath for arithmetic operations
+- Fees are applied to prevent price manipulation
+- Liquidity removal is protected against slippage
+- All external calls are made after state changes
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
+## License
 
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+MIT
