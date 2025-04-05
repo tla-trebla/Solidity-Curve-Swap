@@ -2,14 +2,15 @@
 pragma solidity ^0.8.13;
 
 import "./Math.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract StableSwap {
     // Number of tokens
-    uint256 private constant N = 3;
+    uint256 public immutable N;
     // Amplification coefficient multiplied by N^(N - 1)
     // Higher value makes the curve more flat
     // Lower value makes the curve more like constant product AMM
-    uint256 private constant A = 1000 * (N ** (N - 1));
+    uint256 public immutable A;
     // 0.03%
     uint256 private constant SWAP_FEE = 300;
     // Liquidity fee is derived from 2 constraints
@@ -17,22 +18,37 @@ contract StableSwap {
     // 2. Swapping in a balanced pool is like adding and then removing liquidity
     //    from a balanced pool
     // swap fee = add liquidity fee + remove liquidity fee
-    uint256 private constant LIQUIDITY_FEE = (SWAP_FEE * N) / (4 * (N - 1));
+    uint256 public immutable LIQUIDITY_FEE;
     uint256 private constant FEE_DENOMINATOR = 1e6;
 
-    address[N] public tokens;
+    address[] public tokens;
     // Normalize each token to 18 decimals
     // Example - DAI (18 decimals), USDC (6 decimals), USDT (6 decimals)
-    uint256[N] private multipliers = [1, 1e12, 1e12];
-    uint256[N] public balances;
+    uint256[] private multipliers;
+    uint256[] public balances;
 
     // 1 share = 1e18, 18 decimals
     uint256 private constant DECIMALS = 18;
     uint256 public totalSupply;
     mapping(address => uint256) public balanceOf;
 
-    constructor(address[N] memory _tokens) {
+    constructor(address[] memory _tokens, uint256[] memory _multipliers) {
+        require(_tokens.length == _multipliers.length, "Length mismatch");
+
+        N = _tokens.length;
+
+        uint256 computedA = 1000;
+        for (uint256 i = 0; i < N; ++i) {
+            computedA *= N;
+        }
+        A = computedA;
+
+        require(N > 1, "N must be > 1");
+        LIQUIDITY_FEE = (SWAP_FEE * N) / (4 * (N - 1));
+
         tokens = _tokens;
+        multipliers = _multipliers;
+        balances = new uint256[](N);
     }
 
     function _mint(address _to, uint256 _amount) private {
@@ -46,7 +62,8 @@ contract StableSwap {
     }
 
     // Return precision-adjusted balances, adjusted to 18 decimals
-    function _xp() private view returns (uint256[N] memory xp) {
+    function _xp() private view returns (uint256[] memory xp) {
+        xp = new uint256[](N);
         for (uint256 i; i < N; ++i) {
             xp[i] = balances[i] * multipliers[i];
         }
@@ -58,7 +75,8 @@ contract StableSwap {
      * @param xp Precision-adjusted balances
      * @return D
      */
-    function _getD(uint256[N] memory xp) private pure returns (uint256) {
+    function _getD(uint256[] memory xp) private view returns (uint256) {
+        xp = new uint256[](N);
         /*
         Newton's method to compute D
         -----------------------------
@@ -107,11 +125,12 @@ contract StableSwap {
      * @param x New balance of token i
      * @param xp Current precision-adjusted balances
      */
-    function _getY(uint256 i, uint256 j, uint256 x, uint256[N] memory xp)
+    function _getY(uint256 i, uint256 j, uint256 x, uint256[] memory xp)
         private
-        pure
+        view
         returns (uint256)
     {
+        xp = new uint256[](N);
         /*
         Newton's method to compute y
         -----------------------------
@@ -163,7 +182,7 @@ contract StableSwap {
     }
 
     function getVirtualPrice() external view returns (uint256) {
-        uint256[N] memory xp = _xp();
+        uint256[] memory xp = _xp();
         uint256 d = _getD(xp);
         uint256 _totalSupply = totalSupply;
         if (_totalSupply > 0) {
@@ -188,7 +207,7 @@ contract StableSwap {
         IERC20(tokens[i]).transferFrom(msg.sender, address(this), dx);
 
         // Calculate dy
-        uint256[N] memory xp = _xp();
+        uint256[] memory xp = _xp();
         uint256 x = xp[i] + dx * multipliers[i];
 
         uint256 y0 = xp[j];
@@ -208,20 +227,22 @@ contract StableSwap {
         IERC20(tokens[j]).transfer(msg.sender, dy);
     }
 
-    function addLiquidity(uint256[N] calldata amounts, uint256 minShares)
+    function addLiquidity(uint256[] calldata amounts, uint256 minShares)
         external
         returns (uint256 shares)
     {
+        require(amounts.length == N, "Wrong number of amounts");
+        
         // calculate current liquidity d0
         uint256 _totalSupply = totalSupply;
         uint256 d0;
-        uint256[N] memory old_xs = _xp();
+        uint256[] memory old_xs = _xp();
         if (_totalSupply > 0) {
             d0 = _getD(old_xs);
         }
 
         // Transfer tokens in
-        uint256[N] memory new_xs;
+        uint256[] memory new_xs = new uint256[](N);
         for (uint256 i; i < N; ++i) {
             uint256 amount = amounts[i];
             if (amount > 0) {
@@ -269,11 +290,16 @@ contract StableSwap {
         _mint(msg.sender, shares);
     }
 
-    function removeLiquidity(uint256 shares, uint256[N] calldata minAmountsOut)
+    function removeLiquidity(uint256 shares, uint256[] calldata minAmountsOut)
         external
-        returns (uint256[N] memory amountsOut)
+        returns (uint256[] memory amountsOut)
     {
         uint256 _totalSupply = totalSupply;
+        uint256 n = N;
+
+        require(minAmountsOut.length == n, "Wrong minAmountsOut length");
+
+        amountsOut = new uint256[](n);
 
         for (uint256 i; i < N; ++i) {
             uint256 amountOut = (balances[i] * shares) / _totalSupply;
@@ -301,7 +327,7 @@ contract StableSwap {
         returns (uint256 dy, uint256 fee)
     {
         uint256 _totalSupply = totalSupply;
-        uint256[N] memory xp = _xp();
+        uint256[] memory xp = _xp();
 
         // Calculate d0 and d1
         uint256 d0 = _getD(xp);
@@ -359,19 +385,3 @@ contract StableSwap {
         IERC20(tokens[i]).transfer(msg.sender, amountOut);
     }
 }
-
-interface IERC20 {
-    function totalSupply() external view returns (uint256);
-    function balanceOf(address account) external view returns (uint256);
-    function transfer(address recipient, uint256 amount)
-        external
-        returns (bool);
-    function allowance(address owner, address spender)
-        external
-        view
-        returns (uint256);
-    function approve(address spender, uint256 amount) external returns (bool);
-    function transferFrom(address sender, address recipient, uint256 amount)
-        external
-        returns (bool);
-} 
