@@ -6,9 +6,13 @@ import {StableSwap} from "../src/StableSwap.sol";
 
 contract StableSwapTests is Test {
     function test_DeployContract_Deployed() public {
-        DummyToken dai = new DummyToken("Dai Stablecoin", "DAI", 1_000_000e18);
-        DummyToken usdc = new DummyToken("USD Coin", "USDC", 1_000_000e6);
-        DummyToken usdt = new DummyToken("Tether USD", "USDT", 1_000_000e6);
+        DummyToken dai = new DummyToken("Dai Stablecoin", "DAI");
+        DummyToken usdc = new DummyToken("USD Coin", "USDC");
+        DummyToken usdt = new DummyToken("Tether USD", "USDT");
+
+        dai.mint(msg.sender, 1_000_000e18);
+        usdc.mint(msg.sender, 1_000_000e6);
+        usdt.mint(msg.sender, 1_000_000e6);
 
         address[] memory tokens = new address[](3);
         tokens[0] = address(dai);
@@ -21,7 +25,7 @@ contract StableSwapTests is Test {
         multipliers[2] = 1e12;
 
         StableSwap sut = new StableSwap(tokens, multipliers);
-        
+
         assertTrue(address(sut) != address(0));
     }
 }
